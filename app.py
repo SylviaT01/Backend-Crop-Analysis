@@ -2,24 +2,33 @@ from flask import Flask, request, jsonify
 from flask_cors import CORS 
 import ee
 import os
+import json
 from google.oauth2 import service_account
+from dotenv import load_dotenv
+
+# Load environment variables from .env file
+load_dotenv()
 
 app = Flask(__name__)
 CORS(app)
 
-# Path to the service account JSON key
-SERVICE_ACCOUNT_JSON = 'assets/gcloud.json'
+# Get the JSON credentials from the environment variable
+service_account_info = json.loads(os.getenv("GOOGLE_APPLICATION_CREDENTIALS_JSON"))
 
 # Authenticate using service account credentials
-credentials = service_account.Credentials.from_service_account_file(
-    SERVICE_ACCOUNT_JSON, 
+credentials = service_account.Credentials.from_service_account_info(
+    service_account_info, 
     scopes=["https://www.googleapis.com/auth/earthengine"]
 )
+
+# Initialize Earth Engine
+ee.Initialize(credentials)
+
 
 # # Initialize Earth Engine (assuming authentication is set up)
 # ee.Authenticate()
 # ee.Initialize(project='ee-cropanalysisgee')
-ee.Initialize(credentials)
+
 
 
 # Function to calculate NDVI
