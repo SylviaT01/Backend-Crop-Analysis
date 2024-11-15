@@ -2,21 +2,13 @@ from flask import Flask, request, jsonify
 from flask_cors import CORS 
 import ee
 import os
-import json
-from google.oauth2.service_account import Credentials
 
 app = Flask(__name__)
 CORS(app)
 
-# Load the service account key from an environment variable
-service_account_info = json.loads(os.environ.get('GOOGLE_APPLICATION_CREDENTIALS_JSON'))
-credentials = Credentials.from_service_account_info(service_account_info)
-# Initialize Earth Engine
-ee.Initialize(credentials, project='ee-cropanalysisgee')
-
 # Initialize Earth Engine (assuming authentication is set up)
-# ee.Authenticate()
-# ee.Initialize(project='ee-cropanalysisgee')
+ee.Authenticate()
+ee.Initialize(project='ee-cropanalysisgee')
 
 
 # Function to calculate NDVI
