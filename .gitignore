@@ -1,1 +1,6 @@
+assets/*.json
 assets/gcloud.json
+
+# Add .env to .gitignore
+.env
+
