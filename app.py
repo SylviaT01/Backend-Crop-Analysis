@@ -78,6 +78,265 @@ def calculate_mndwi(image):
     mndwi = green_band.subtract(swir_band).divide(green_band.add(swir_band)).rename('MNDWI')
     return mndwi
 
+# @app.route('/get-ndvi', methods=['POST'])
+# def get_vegetation_index():
+#     data = request.json
+#     coordinates = data.get('coordinates') 
+#     start_date = data.get('start_date')
+#     end_date = data.get('end_date')
+#     index_type = data.get('index', 'NDVI')  
+
+#     aoi = ee.Geometry.Rectangle(coordinates)
+#     image_collection = ee.ImageCollection('COPERNICUS/S2_SR_HARMONIZED') \
+#         .filterBounds(aoi) \
+#         .filterDate(start_date, end_date) \
+#         .filter(ee.Filter.lt('CLOUDY_PIXEL_PERCENTAGE', 20))
+
+#     image = image_collection.sort('system:time_start').first()  
+#     if image.getInfo() is None:
+#         return jsonify({
+#             'error': 'No images available for the given date range and area with acceptable cloud cover.'
+#         }), 404
+
+#     # Calculate the requested vegetation index
+#     if index_type == 'NDVI':
+#         vegetation_index = calculate_ndvi(image)
+#         legend = {
+#             'Green': 'High vegetation (healthy plant growth) - Index: 0.3 to 1.0',
+#             'Yellow': 'Moderate vegetation (sparse or stressed plants) - Index: 0.1 to 0.3',
+#             'Cyan': 'Low vegetation or bare soil - Index: -0.1 to 0.1',
+#             'Blue': 'Water bodies - Index: -1.0 to -0.1'
+#         }
+#     elif index_type == 'EVI':
+#         vegetation_index = calculate_evi(image)
+#         legend = {
+#             '#006400': 'High vegetation - Index: > 0.4',
+#             '#ADFF2F': 'Moderate vegetation - Index: 0.2 to 0.4',
+#             '#D2B48C': 'Bare soil - Index: 0 to 0.2',
+#             '#0000FF': 'Non-vegetated/Water bodies - Index: < 0'
+#         }
+#     elif index_type == 'NDWI':
+#         vegetation_index = calculate_ndwi(image)
+#         legend = {
+#             '#0000FF': 'Water - High water content - Index: > 0.3',
+#             '#87CEEB': 'Moderate water content - Index: 0.1 to 0.3',
+#             '#D3D3D3': 'Low water content or bare soil - Index: -0.1 to 0.1',
+#             '#8B4513': 'Dry/bare soil - Index: < -0.1'
+#         }
+#     elif index_type == 'MNDWI':  # New option for Modified NDWI
+#         vegetation_index = calculate_mndwi(image)
+#         legend = {
+#             '#0000FF': 'Water - High water content - Index: > 0.3',
+#             '#87CEEB': 'Moderate water content - Index: 0.1 to 0.3',
+#             '#D3D3D3': 'Low water content or bare soil - Index: -0.1 to 0.1',
+#             '#8B4513': 'Dry/bare soil - Index: < -0.1'
+#         }
+#     else:
+#         return jsonify({
+#             'error': 'Invalid vegetation index type. Choose from NDVI, EVI, NDWI, or MNDWI.'
+#         }), 400
+
+#     # Compute NDVI, EVI, or NDWI range for ROI
+#     stats = vegetation_index.reduceRegion(
+#         reducer=ee.Reducer.minMax(),
+#         geometry=aoi,
+#         scale=30,
+#         maxPixels=1e8
+#     ).getInfo()
+
+#     # Print the range for the vegetation index
+#     print(f"Vegetation Index Range for ROI: {stats}")
+
+#     # Generate map URL with correct color palette and value range
+#     ndvi_params = vegetation_index.getMapId({
+#         'min': stats['NDWI_min'] if index_type == 'NDWI' else 
+#                stats['NDVI_min'] if index_type == 'NDVI' else 
+#                stats['EVI_min'] if index_type == 'EVI' else
+#                stats['MNDWI_min'],
+#         'max': stats['NDWI_max'] if index_type == 'NDWI' else 
+#                stats['NDVI_max'] if index_type == 'NDVI' else 
+#                stats['EVI_max'] if index_type == 'EVI' else
+#                stats['MNDWI_max'],
+#         'palette': ['blue', 'cyan', 'yellow', 'green'] if index_type == 'NDVI' else 
+#                    ['#8B4513', '#D3D3D3', '#87CEEB', '#0000FF'] if index_type == 'NDWI' else
+#                    ['#0000FF', '#D2B48C', '#ADFF2F', '#006400'] if index_type == 'EVI' else 
+#                    ['#8B4513', '#D3D3D3', '#87CEEB', '#0000FF']  # Palette for MNDWI
+#     })
+
+#     return jsonify({
+#         'tile_url': ndvi_params['tile_fetcher'].url_format,
+#         'attribution': 'Google Earth Engine',
+#         'legend': legend
+#     })
+
+
+# @app.route('/get-index-values', methods=['POST'])
+# def get_index_values():
+#     # Extract the user input from the request
+#     data = request.json
+#     print(f"Received data: {data}")
+#     latitude = data.get('latitude')
+#     longitude = data.get('longitude')
+#     start_date = data.get('start_date')
+#     end_date = data.get('end_date')
+
+#     if not start_date or not end_date:
+#         return jsonify({"error": "Invalid date range"}), 400
+#     print(f"Start date: {start_date}, End date: {end_date}")
+
+
+#     # Define the point of interest (user-provided latitude and longitude)
+#     point = ee.Geometry.Point([longitude, latitude])
+
+#     # Load and filter Sentinel-2 image collection
+#     image_collection = ee.ImageCollection('COPERNICUS/S2_SR_HARMONIZED') \
+#         .filterBounds(point) \
+#         .filterDate(start_date, end_date) \
+#         .filter(ee.Filter.lt('CLOUDY_PIXEL_PERCENTAGE', 20)) 
+#     print(image_collection.size().getInfo())
+#     # Get the first image in the filtered collection
+#     image = image_collection.sort('system:time_start').first()
+
+#     # Check if the image exists
+#     image_exists = image.getInfo() is not None
+
+#     if not image_exists:
+#         return jsonify({
+#             'error': 'No images available for the given date range and location with acceptable cloud cover.'
+#         }), 404
+
+#     # Calculate all indices
+#     ndvi = calculate_ndvi(image)
+#     evi = calculate_evi(image)
+#     ndwi = calculate_ndwi(image)
+#     mndwi = calculate_mndwi(image)
+
+#     # Combine all indices into a single image
+#     combined_image = ndvi.addBands([evi, ndwi, mndwi])
+
+#     # Sample the values of all indices at the point
+#     sampled_values = combined_image.sample(point, 10).first().getInfo()
+
+#     # Extract values from the sampled feature
+#     if sampled_values:
+#         properties = sampled_values['properties']
+#         ndvi_value = properties.get('NDVI')
+#         evi_value = properties.get('EVI')
+#         ndwi_value = properties.get('NDWI')
+#         mndwi_value = properties.get('MNDWI')
+#     else:
+#         return jsonify({
+#             'error': 'Failed to retrieve values at the given location.'
+#         }), 500
+
+#     # Return all index values
+#     return jsonify({
+#         'ndvi_value': ndvi_value,
+#         'evi_value': evi_value,
+#         'ndwi_value': ndwi_value,
+#         'mndwi_value': mndwi_value
+#     })
+
+
+
+# @app.route('/get-ndvi-for-area', methods=['POST'])
+# def get_ndvi_for_area():
+#     # Extract the user input from the request
+#     data = request.json
+#     print("Received data:", data) 
+#     coordinates = data.get('coordinates') 
+#     start_date = data.get('start_date')
+#     end_date = data.get('end_date')
+
+#     # Define area of interest (from user-provided polygon coordinates)
+#     aoi = ee.Geometry.Polygon(coordinates)
+
+#     # Load and filter Sentinel-2 image collection
+#     image_collection = ee.ImageCollection('COPERNICUS/S2_SR_HARMONIZED') \
+#         .filterBounds(aoi) \
+#         .filterDate(start_date, end_date) \
+#         .filter(ee.Filter.lt('CLOUDY_PIXEL_PERCENTAGE', 20))  
+
+#     # Check if the image collection has any images after filtering
+#     image_count = image_collection.size().getInfo()
+    
+#     if image_count == 0:
+#         return jsonify({
+#             'error': 'No images available for the given date range and area with acceptable cloud cover.'
+#         }), 404
+
+#     # Calculate indices for the image collection
+#     ndvi_collection = image_collection.map(calculate_ndvi)
+#     evi_collection = image_collection.map(calculate_evi)
+#     ndwi_collection = image_collection.map(calculate_ndwi)
+#     mndwi_collection = image_collection.map(calculate_mndwi)
+
+#     # Create a mosaic from the collections
+#     ndvi_mosaic = ndvi_collection.mean().clip(aoi)
+#     evi_mosaic = evi_collection.mean().clip(aoi)
+#     ndwi_mosaic = ndwi_collection.mean().clip(aoi)
+#     mndwi_mosaic = mndwi_collection.mean().clip(aoi)
+
+#     # Define visualization parameters for each index
+#     ndvi_params = ndvi_mosaic.getMapId({
+#         'min': -0.5,
+#         'max': 1,
+#         'palette': ['blue', 'cyan', 'yellow', 'green']
+#     })
+#     evi_params = evi_mosaic.getMapId({
+#         'min': -0.2,
+#         'max': 1,
+#         'palette': ['#228B22', '#ADFF2F', '#FFFF00', '#8B4513']
+#     })
+#     ndwi_params = ndwi_mosaic.getMapId({
+#         'min': -0.5,
+#         'max': 0.5,
+#         'palette': ['#8B4513', '#D3D3D3', '#87CEEB', '#0000FF']
+#     })
+#     mndwi_params = mndwi_mosaic.getMapId({
+#         'min': -0.5,
+#         'max': 0.5,
+#         'palette': ['#8B4513', '#D3D3D3', '#87CEEB', '#0000FF']
+#     })
+
+#     # Define legends for the indices
+#     legend = {
+#         'NDVI': {
+#             'Green': 'High vegetation (healthy plant growth) - NDVI: 0.3 to 1.0',
+#             'Yellow': 'Moderate vegetation (sparse or stressed plants) - NDVI: 0.1 to 0.3',
+#             'Cyan': 'Low vegetation or bare soil - NDVI: -0.1 to 0.1',
+#             'Blue': 'Water bodies - NDVI: -1.0 to -0.1'
+#         },
+#         'EVI': {
+#             '#228B22': 'High vegetation - Index: > 0.4',
+#             '#ADFF2F': 'Moderate vegetation - Index: 0.2 to 0.4',
+#             '#FFFF00': 'Sparse vegetation - Index: 0 to 0.2',
+#             '#8B4513': 'Bare soil - Index: -0.2 to 0',
+#             '#0000FF': 'Water bodies - Index: < -0.2'
+#         },
+#         'NDWI': {
+#             '#0000FF': 'Water - High water content - Index: > 0.3',
+#             '#87CEEB': 'Moderate water content - Index: 0.1 to 0.3',
+#             '#D3D3D3': 'Low water content or bare soil - Index: -0.1 to 0.1',
+#             '#8B4513': 'Dry/bare soil - Index: < -0.1'
+#         },
+#         'MNDWI': {
+#             '#0000FF': 'Water - High water content - Index: > 0.3',
+#             '#87CEEB': 'Moderate water content - Index: 0.1 to 0.3',
+#             '#D3D3D3': 'Low water content or bare soil - Index: -0.1 to 0.1',
+#             '#8B4513': 'Dry/bare soil - Index: < -0.1'
+#         }
+#     }
+
+#     # Return URLs for all indices and legends to the frontend
+#     return jsonify({
+#         'ndvi_tile_url': ndvi_params['tile_fetcher'].url_format,
+#         'evi_tile_url': evi_params['tile_fetcher'].url_format,
+#         'ndwi_tile_url': ndwi_params['tile_fetcher'].url_format,
+#         'mndwi_tile_url': mndwi_params['tile_fetcher'].url_format,
+#         'legend': legend
+#     })
+
 @app.route('/get-ndvi', methods=['POST'])
 def get_vegetation_index():
     data = request.json
@@ -91,11 +350,19 @@ def get_vegetation_index():
         .filterBounds(aoi) \
         .filterDate(start_date, end_date) \
         .filter(ee.Filter.lt('CLOUDY_PIXEL_PERCENTAGE', 20))
+    
+    image_count = image_collection.size().getInfo()
+    print(f"Number of images found: {image_count}") 
+    if image_collection.size().getInfo() == 0:
+        return jsonify({
+            'error': f'No Sentinel-2 imagery available for the requested date range ({start_date} to {end_date}) and area of interest.'
+        }), 404
 
     image = image_collection.sort('system:time_start').first()  
     if image.getInfo() is None:
         return jsonify({
             'error': 'No images available for the given date range and area with acceptable cloud cover.'
+
         }), 404
 
     # Calculate the requested vegetation index
@@ -336,7 +603,6 @@ def get_ndvi_for_area():
         'mndwi_tile_url': mndwi_params['tile_fetcher'].url_format,
         'legend': legend
     })
-    
 
 
 
