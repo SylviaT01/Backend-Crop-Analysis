@@ -481,6 +481,7 @@ def get_ndvi_for_area():
 
     return jsonify({
         f'{index_type}_tile_url': index_params['tile_fetcher'].url_format,
+        'attribution': 'Google Earth Engine',
         'legend': get_legend(index_type),
         'palette': get_palette(index_type),
         'index_range': {
